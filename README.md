@@ -1,6 +1,6 @@
 # Kokoro TTS Extension
 
-Browser extension (**Chrome** & **Firefox**) that sends selected text or full articles to a [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI) endpoint for high-quality text-to-speech. Supports streaming playback in the page overlay or downloading the generated audio file, plus an EPUB reader mode.
+Browser extension (**Chrome** & **Firefox**) that sends selected text or full articles to an OpenAI-compatible Text-to-Speech endpoint for high-quality speech generation. Supports English via [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI), native Russian via [silero-tts-fastapi](https://github.com/anx436/silero-tts-fastapi), streaming playback in an in-page overlay, file downloads, and an integrated EPUB reader.
 
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/kokoro-tts-sender/befhghjhbjpjnbamdginljoiaafoclmf">
@@ -43,12 +43,15 @@ Read highlighted text or a whole article with an in-page overlay and playback co
 
 Verified against the current source (not aspirational):
 
-- **Kokoro-FastAPI TTS** — speech generation via the OpenAI-compatible `/v1/audio/speech` API on a **user-configured** endpoint (default `http://127.0.0.1:8880/v1/`; localhost, LAN, or remote).
+- **OpenAI-Compatible TTS** — speech generation via the `/v1/audio/speech` API on a **user-configured** endpoint (default `http://127.0.0.1:8880/v1/`; localhost, LAN, or remote).
+- **Multilingual Support & Profiles** — seamless **EN / RU** toggle in the popup with independent URL and voice mixer persistence:
+  - English via [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI).
+  - Native Russian via [silero-tts-fastapi](https://github.com/anx436/silero-tts-fastapi) (Silero v5).
 - **Chrome & Firefox (MV3)** — separate builds under `dist/chrome` and `dist/firefox`.
 - **Selection or whole article** — context menus “Send to Kokoro TTS” (selection) and “Read Article with Kokoro TTS” (Readability-based article extract).
 - **Stream or download** — stream audio into the overlay player, or download a file.
 - **Voice mixer** — search voices from the API and blend multiple voices with weights.
-- **Text normalization** (toggleable) — contractions, transliteration of non-Latin scripts, dates/numbers, units, URLs, emails, phones, and related pronunciation prep in `text-processor.js`.
+- **Text normalization** (toggleable) — contractions, dates/numbers, units, URLs, emails, phones, and related pronunciation prep in `text-processor.js`.
 - **Overlay playback** — play/pause, previous/next sentence, speed & volume, Spacebar play/pause; optional auto-scroll on the origin page with a “comfort zone” to reduce jumpiness. Compact mode is **draggable** with a persisted, viewport-clamped position, and **collapsible** (including full→floating) without stopping audio; Close still tears down the player.
 - **Floating mic button** — optional on-page control (can be disabled in settings).
 - **EPUB reader** — open documents in `reader.html` (epub.js); optional autoplay.
@@ -58,9 +61,9 @@ Verified against the current source (not aspirational):
 
 ## Privacy & data handling
 
-- The extension does **not** hardcode a vendor cloud TTS API. Text you select or extract is sent to the **Kokoro-FastAPI base URL you configure** in settings.
+- The extension does **not** hardcode a vendor cloud TTS API. Text you select or extract is sent to the **TTS base URL you configure** in settings.
 - That endpoint may be **localhost**, another machine on your **LAN**, or a **remote** host you choose. If you point it at a remote server, text leaves your browser over the network to that server.
-- If the configured URL uses **`http://`** (not **`https://`**) to a non-local host, that text is sent **unencrypted in transit**. LAN HTTP Kokoro setups remain supported; prefer HTTPS whenever the path is not a trusted local network.
+- If the configured URL uses **`http://`** (not **`https://`**) to a non-local host, that text is sent **unencrypted in transit**. LAN HTTP setups remain supported; prefer HTTPS whenever the path is not a trusted local network.
 - Settings (API URL, voices, playback options, etc.) are stored primarily via **`browser.storage.sync`** (some values are also kept in `storage.local`). If browser sync is enabled, Chrome/Firefox may sync those settings through your browser account across devices; the extension does not run its own sync backend.
 - There is **no** built-in telemetry or analytics in this extension.
 - See [`PrivacyPolicy.md`](./PrivacyPolicy.md) for the store-facing policy text.
@@ -70,7 +73,9 @@ Default host permissions cover localhost; non-local URLs prompt for optional hos
 ## Prerequisites
 
 - **Node.js `^20.19.0 || ^22.13.0 || >=24`** and npm (for building from source; CI uses Node 22).
-- A reachable **[Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI)** instance (local Docker, LAN, or remote) for actual speech generation. Unit tests mock the API and do **not** require a live server.
+- A reachable TTS backend:
+  - **[Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI)** for high-quality English speech.
+  - **[silero-tts-fastapi](https://github.com/anx436/silero-tts-fastapi)** for lightweight, native Russian speech (Silero v5).
 
 ## Installation & build
 
@@ -78,7 +83,7 @@ Default host permissions cover localhost; non-local URLs prompt for optional hos
 git clone https://github.com/Fooftilly/kokoro-extension.git
 cd kokoro-extension
 npm ci
-npm run build
+npm run build -- --skip-tests
 ```
 
 This creates:
@@ -112,11 +117,12 @@ Other commands:
 
 ## Usage
 
-1. Configure the API base URL in the popup (default `http://127.0.0.1:8880/v1/`) and ensure Kokoro-FastAPI is reachable.
-2. **Highlighted text:** select text → right-click → **Send to Kokoro TTS**.
-3. **Whole article:** right-click the page → **Read Article with Kokoro TTS** (or use the read-article shortcut).
-4. Choose **Stream** or **Download** in settings; adjust voice mixer, speed, volume, and normalization as needed.
-5. Optional: open the EPUB reader from the popup or the configured shortcut.
+1. Configure the API base URL in the popup (default `http://127.0.0.1:8880/v1/`) and ensure your TTS backend is reachable.
+2. Toggle between **EN** (Kokoro) and **RU** (Silero) as needed—each profile remembers its own URL and voice selection.
+3. **Highlighted text:** select text → right-click → **Send to Kokoro TTS**.
+4. **Whole article:** right-click the page → **Read Article with Kokoro TTS** (or use the read-article shortcut).
+5. Choose **Stream** or **Download** in settings; adjust voice mixer, speed, volume, and normalization as needed.
+6. Optional: open the EPUB reader from the popup or the configured shortcut.
 
 ## Development
 
@@ -130,6 +136,7 @@ Before opening a PR: `npm ci`, targeted tests as needed, `npm test`, `npm run li
 ## Credits
 
 - **Kokoro TTS** via [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI)
+- **Russian TTS** via [silero-tts-fastapi](https://github.com/anx436/silero-tts-fastapi) (powered by [Silero Models](https://github.com/snakers4/silero-models))
 - [Compromise](https://github.com/spencermountain/compromise) (+ dates/numbers) for text normalization
 - [Transliteration](https://github.com/yf-hk/transliteration) (lite bundle in-repo) for script conversion
 - [WebExtension Polyfill](https://github.com/mozilla/webextension-polyfill)
