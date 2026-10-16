@@ -101,7 +101,8 @@ export function processContent(blocks, segmenter) {
             for (const seg of rawSegments) {
                 const segText = seg.segment;
                 if (!segText.trim()) continue;
-                if (!/[a-zA-Z0-9]/.test(segText)) continue;
+                // if (!/[a-zA-Z0-9]/.test(segText)) continue;
+                if (!/[\p{L}\p{N}]/u.test(segText)) continue;
 
                 if (mergedSegments.length > 0) {
                     const last = mergedSegments[mergedSegments.length - 1];
@@ -112,8 +113,8 @@ export function processContent(blocks, segmenter) {
                     const endsWithStrictDot = lastText.endsWith('.');
                     const isInitial = /(?:^|[\s\.])[A-Z]\.$/.test(trimmedLast);
 
-                    const lastWordCount = trimmedLast.split(/\s+/).filter(w => /[a-zA-Z0-9]/.test(w)).length;
-                    const currWordCount = segText.trim().split(/\s+/).filter(w => /[a-zA-Z0-9]/.test(w)).length;
+                    const lastWordCount = trimmedLast.split(/\s+/).filter(w => /[\p{L}\p{N}]/u.test(w)).length;
+                    const currWordCount = segText.trim().split(/\s+/).filter(w => /[\p{L}\p{N}]/u.test(w)).length;
 
                     // Merging if either side is tiny (1-2 words) AND both are relatively short
                     const isTiny = lastWordCount <= 2 || currWordCount <= 2;

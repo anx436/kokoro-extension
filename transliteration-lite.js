@@ -25,14 +25,7 @@
     };
 
     window.transliterate = function (text) {
-        if (!text) return text;
-
-        let result = '';
-        for (let i = 0; i < text.length; i++) {
-            const char = text[i];
-            const mapped = mapping[char];
-            result += (mapped !== undefined) ? mapped : char;
-        }
-        return result;
+        return text; // bypass transliteration
+    };
     };
 })();

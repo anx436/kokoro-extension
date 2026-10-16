@@ -74,6 +74,48 @@ function applyPermissionDeniedUI() {
 
 // --- Voice Mixer Logic ---
 let currentVoices = [];
+let currentLanguage = 'en';
+
+function updateProfileButtonsUI(lang) {
+    const btnEn = document.getElementById('profileEn');
+    const btnRu = document.getElementById('profileRu');
+    if (!btnEn || !btnRu) return;
+    btnEn.style.background = lang === 'en' ? '#007bff' : '#6c757d';
+    btnRu.style.background = lang === 'ru' ? '#007bff' : '#6c757d';
+}
+
+async function switchLanguage(targetLang) {
+    if (targetLang === currentLanguage) return;
+
+    // 1. Save outgoing profile values
+    const currentUrl = normalizeApiUrl(document.getElementById('apiUrl').value);
+    const currentVoiceStr = serializeVoiceString(currentVoices);
+    const saveObj = {};
+    saveObj[`${currentLanguage}_apiUrl`] = currentUrl;
+    saveObj[`${currentLanguage}_voice`] = currentVoiceStr;
+    await browser.storage.sync.set(saveObj);
+
+    // 2. Load incoming profile values
+    const data = await browser.storage.sync.get({
+        [`${targetLang}_apiUrl`]: 'http://127.0.0.1:8880/v1/',
+        [`${targetLang}_voice`]: targetLang === 'ru' ? 'xenia' : 'af_sarah',
+    });
+
+    currentLanguage = targetLang;
+    await browser.storage.sync.set({ activeLanguage: currentLanguage });
+    updateProfileButtonsUI(currentLanguage);
+
+    const newUrl = data[`${targetLang}_apiUrl`];
+    const newVoice = data[`${targetLang}_voice`];
+
+    document.getElementById('apiUrl').value = newUrl;
+    currentVoices = parseVoiceString(newVoice);
+    renderVoiceMixer();
+
+    // 3. Sync to main extension keys and re-probe backend
+    await saveOptions();
+    await refreshBackendStatus(newUrl);
+}
 let availableVoices = [];
 /** @type {{ kind: string, message: string }} */
 let voiceFetchStatus = { kind: 'idle', message: '' };
@@ -547,6 +589,10 @@ const saveOptions = async (isDebounced = false, options = {}) => {
 
     const theme = document.documentElement.classList.contains('dark-theme') ? 'dark' : 'light';
     const settings = { apiUrl, voice, mode, defaultSpeed, defaultVolume, autoScroll, autoplayReader, showFloatingButton, normalizationOptions, theme };
+    
+    settings.activeLanguage = currentLanguage;
+    settings[`${currentLanguage}_apiUrl`] = apiUrl;
+    settings[`${currentLanguage}_voice`] = voice;
 
     const showPermissionDeniedToast = () => {
         const status = document.getElementById('status');
@@ -608,6 +654,11 @@ const saveOptions = async (isDebounced = false, options = {}) => {
 const restoreOptions = async () => {
     try {
         const items = await browser.storage.sync.get({
+            activeLanguage: 'en',
+            en_apiUrl: 'http://127.0.0.1:8880/v1/',
+            en_voice: 'af_sarah(0.5)+af_nicole(0.3)+af_sky(0.2)',
+            ru_apiUrl: 'http://127.0.0.1:8880/v1/',
+            ru_voice: 'xenia',
             apiUrl: 'http://127.0.0.1:8880/v1/',
             voice: 'af_sarah(0.5)+af_nicole(0.3)+af_sky(0.2)',
             mode: 'stream',
@@ -627,6 +678,8 @@ const restoreOptions = async () => {
             },
             theme: 'light'
         });
+        currentLanguage = items.activeLanguage || 'en';
+        updateProfileButtonsUI(currentLanguage);
 
         if (items.theme === 'dark') {
             document.documentElement.classList.add('dark-theme');
@@ -747,6 +800,9 @@ document.addEventListener('click', (e) => {
 
 document.addEventListener('DOMContentLoaded', () => {
     restoreOptions();
+
+    document.getElementById('profileEn')?.addEventListener('click', () => switchLanguage('en'));
+    document.getElementById('profileRu')?.addEventListener('click', () => switchLanguage('ru'));
 
     // Display version
     try {

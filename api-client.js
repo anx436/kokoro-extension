@@ -160,10 +160,13 @@ function normalizeVoiceIds(voices) {
 /**
  * Keep voices matching the supported language/gender prefixes.
  */
+// function filterVoicesByPrefix(voiceIds, prefixes) {
+//     const list = Array.isArray(voiceIds) ? voiceIds : [];
+//     const prefs = Array.isArray(prefixes) && prefixes.length ? prefixes : VOICE_PREFIXES;
+//     return list.filter((v) => typeof v === 'string' && prefs.some((prefix) => v.startsWith(prefix)));
+// }
 function filterVoicesByPrefix(voiceIds, prefixes) {
-    const list = Array.isArray(voiceIds) ? voiceIds : [];
-    const prefs = Array.isArray(prefixes) && prefixes.length ? prefixes : VOICE_PREFIXES;
-    return list.filter((v) => typeof v === 'string' && prefs.some((prefix) => v.startsWith(prefix)));
+    return Array.isArray(voiceIds) ? voiceIds : [];
 }
 
 /**
