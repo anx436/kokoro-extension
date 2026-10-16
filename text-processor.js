@@ -163,9 +163,54 @@ export function processContent(blocks, segmenter) {
                 });
             }
 
-            const paraSentences = [];
+            // Break runaway sentences into bite-sized clauses (max ~200 chars)
+            const finalSegments = [];
+            const MAX_SEG_CHARS = 200;
 
             for (const seg of mergedSegments) {
+                if (seg.text.length <= MAX_SEG_CHARS) {
+                    finalSegments.push(seg);
+                    continue;
+                }
+
+                let remaining = seg.text;
+                let offset = seg.index;
+
+                while (remaining.length > MAX_SEG_CHARS) {
+                    const slice = remaining.slice(0, MAX_SEG_CHARS);
+                    
+                    // Look for natural breathing pauses (; : — – ,)
+                    const lastPause = Math.max(
+                        slice.lastIndexOf(';'),
+                        slice.lastIndexOf(':'),
+                        slice.lastIndexOf('—'),
+                        slice.lastIndexOf('–'),
+                        slice.lastIndexOf(',')
+                    );
+
+                    let splitPos;
+                    if (lastPause > 60) {
+                        splitPos = lastPause + 1; // Split right after punctuation
+                    } else {
+                        // Fallback to the nearest word boundary
+                        const lastSpace = slice.lastIndexOf(' ');
+                        splitPos = (lastSpace > 60) ? lastSpace + 1 : MAX_SEG_CHARS;
+                    }
+
+                    const chunk = remaining.slice(0, splitPos);
+                    finalSegments.push({ text: chunk, index: offset });
+                    offset += chunk.length;
+                    remaining = remaining.slice(splitPos);
+                }
+
+                if (remaining.trim()) {
+                    finalSegments.push({ text: remaining, index: offset });
+                }
+            }
+
+            const paraSentences = [];
+
+            for (const seg of finalSegments) {
                 const segText = seg.text;
                 const range = findRange(tempDiv, seg.index, seg.index + segText.length);
                 let htmlFragment = segText;
