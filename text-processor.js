@@ -66,6 +66,60 @@ export function formatInitialismWithSuffix(acronym, suffix) {
     return `${spaced} ${cleanSuffix}`;
 }
 
+/**
+ * Slices mixed-language text strictly along alphabet boundaries (Cyrillic vs. Latin),
+ * snapping cuts to whitespace/punctuation and preserving exact character offsets.
+ */
+function splitSegmentByScript(seg) {
+    const text = seg.text;
+    const hasCyr = /[\u0400-\u04FF]/.test(text);
+    const hasLat = /[a-zA-Z]/.test(text);
+    if (!hasCyr || !hasLat) return [seg]; // Monolingual clause, no split needed
+
+    const slices = [];
+    let currentScript = null;
+    let sliceStart = 0;
+    const baseOffset = seg.index;
+
+    for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        let chScript = null;
+        if (/[\u0400-\u04FF]/.test(ch)) chScript = 'ru';
+        else if (/[a-zA-Z]/.test(ch)) chScript = 'en';
+
+        if (chScript) {
+            if (currentScript === null) {
+                currentScript = chScript;
+            } else if (currentScript !== chScript) {
+                // Script changed! Look back for clean boundary (whitespace)
+                let splitAt = i;
+                for (let j = i - 1; j >= sliceStart; j--) {
+                    if (/\s/.test(text[j])) {
+                        splitAt = j + 1; // Split right after the whitespace
+                        break;
+                    }
+                }
+
+                const piece = text.slice(sliceStart, splitAt);
+                if (piece.trim()) {
+                    slices.push({ text: piece, index: baseOffset + sliceStart });
+                }
+                sliceStart = splitAt;
+                currentScript = chScript;
+            }
+        }
+    }
+
+    if (sliceStart < text.length) {
+        const tail = text.slice(sliceStart);
+        if (tail.trim()) {
+            slices.push({ text: tail, index: baseOffset + sliceStart });
+        }
+    }
+
+    return slices.length > 0 ? slices : [seg];
+}
+
 export function processContent(blocks, segmenter) {
     const sentences = [];
     const renderData = [];
@@ -101,7 +155,7 @@ export function processContent(blocks, segmenter) {
             for (const seg of rawSegments) {
                 const segText = seg.segment;
                 if (!segText.trim()) continue;
-                // if (!/[a-zA-Z0-9]/.test(segText)) continue;
+                // Unicode-safe check for letters or numbers (allows Cyrillic)
                 if (!/[\p{L}\p{N}]/u.test(segText)) continue;
 
                 if (mergedSegments.length > 0) {
@@ -163,9 +217,9 @@ export function processContent(blocks, segmenter) {
                 });
             }
 
-            // Break runaway sentences into bite-sized clauses (max ~200 chars)
+            // 1. Break runaway sentences into bite-sized clauses (max ~250 chars)
             const finalSegments = [];
-            const MAX_SEG_CHARS = 200;
+            const MAX_SEG_CHARS = 250;
 
             for (const seg of mergedSegments) {
                 if (seg.text.length <= MAX_SEG_CHARS) {
@@ -178,8 +232,6 @@ export function processContent(blocks, segmenter) {
 
                 while (remaining.length > MAX_SEG_CHARS) {
                     const slice = remaining.slice(0, MAX_SEG_CHARS);
-                    
-                    // Look for natural breathing pauses (; : — – ,)
                     const lastPause = Math.max(
                         slice.lastIndexOf(';'),
                         slice.lastIndexOf(':'),
@@ -208,9 +260,15 @@ export function processContent(blocks, segmenter) {
                 }
             }
 
+            // 2. Split mixed Cyrillic/Latin clauses along language boundaries
+            const scriptSegments = [];
+            for (const seg of finalSegments) {
+                scriptSegments.push(...splitSegmentByScript(seg));
+            }
+
             const paraSentences = [];
 
-            for (const seg of finalSegments) {
+            for (const seg of scriptSegments) {
                 const segText = seg.text;
                 const range = findRange(tempDiv, seg.index, seg.index + segText.length);
                 let htmlFragment = segText;
