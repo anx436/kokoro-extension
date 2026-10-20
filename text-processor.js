@@ -299,9 +299,9 @@ export function processContent(blocks, segmenter) {
                 // We target Roman numerals at the start of strings or after full stops, followed by a separator and a capitalized word.
                 // This ensures "I" in "I — THE" is expanded to "one" despite being a single letter.
                 const headingRomanMap = {
-                    "I": "one", "II": "two", "III": "three", "IV": "four", "V": "five", "VI": "six", "VII": "seven", "VIII": "eight", "IX": "nine", "X": "ten"
+                    "II": "two", "III": "three", "IV": "four", "V": "five", "VI": "six", "VII": "seven", "VIII": "eight", "IX": "nine", "X": "ten"
                 };
-                spokenText = spokenText.replace(/(^|\n|\. |\! |\? )\s*\b(I|II|III|IV|V|VI|VII|VIII|IX|X)\b\s*(—|–|-|:|\.)\s+([A-Z])/g, (match, prefix, rom, sep, nextChar) => {
+                spokenText = spokenText.replace(/(^|\n|\. |\! |\? )\s*\b(II|III|IV|V|VI|VII|VIII|IX|X)\b\s*(—|–|-|:|\.)\s+([A-Z])/g, (match, prefix, rom, sep, nextChar) => {
                     const val = headingRomanMap[rom];
                     if (!val) return match;
                     const spaceBefore = (sep === '.' || sep === ':') ? '' : ' ';
@@ -569,15 +569,14 @@ export function processContent(blocks, segmenter) {
                     }
                     return `${p1} to ${p2}`;
                 });
-
                 const ordinalRomanMap = {
-                    "I": "first", "II": "second", "III": "third", "IV": "fourth", "V": "fifth", "VI": "sixth", "VII": "seventh", "VIII": "eighth", "IX": "ninth", "X": "tenth",
+                    "II": "second", "III": "third", "IV": "fourth", "V": "fifth", "VI": "sixth", "VII": "seventh", "VIII": "eighth", "IX": "ninth", "X": "tenth",
                     "XI": "eleventh", "XII": "twelfth", "XIII": "thirteenth", "XIV": "fourteenth", "XV": "fifteenth",
                     "XVI": "sixteenth", "XVII": "seventeenth", "XVIII": "eighteenth", "XIX": "nineteenth", "XX": "twentieth",
                     "XXI": "twenty-first", "XXII": "twenty-second", "XXIII": "twenty-third", "L": "fiftieth"
                 };
                 const cardinalRomanMap = {
-                    "I": "one", "II": "two", "III": "three", "IV": "four", "V": "five", "VI": "six", "VII": "seven", "VIII": "eight", "IX": "nine", "X": "ten",
+                    "II": "two", "III": "three", "IV": "four", "V": "five", "VI": "six", "VII": "seven", "VIII": "eight", "IX": "nine", "X": "ten",
                     "XI": "eleven", "XII": "twelve", "XIII": "thirteen", "XIV": "fourteen", "XV": "fifteen",
                     "XVI": "sixteen", "XVII": "seventeen", "XVIII": "eighteen", "XIX": "nineteen", "XX": "twenty",
                     "XXI": "twenty-one", "XXII": "twenty-two", "XXIII": "twenty-three", "XXIV": "twenty-four", "XXV": "twenty-five",
